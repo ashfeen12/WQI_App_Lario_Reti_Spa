@@ -4,145 +4,249 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# WQI Parameters (all numeric values as floats for consistency)
-PARAMETERS = {
-    'pH': {'V0': 7.0, 'Sn': 8.5, 'Wi': 0.10, 'Unit': ''},
-    'DO': {'V0': 5.0, 'Sn': 14.6, 'Wi': 0.17, 'Unit': 'mg/L'},
-    'BOD5': {'V0': 0.0, 'Sn': 3.0, 'Wi': 0.12, 'Unit': 'mg/L'},
-    'Turbidity': {'V0': 0.0, 'Sn': 5.0, 'Wi': 0.08, 'Unit': 'NTU'},
-    'Total_Coliform': {'V0': 0.0, 'Sn': 5.0, 'Wi': 0.15, 'Unit': 'CFU/100mL'},
-    'Nitrate': {'V0': 0.0, 'Sn': 45.0, 'Wi': 0.10, 'Unit': 'mg/L'},
-    'Residual_Chlorine': {'V0': 0.2, 'Sn': 4.0, 'Wi': 0.15, 'Unit': 'mg/L'},
-    'Temp_Change': {'V0': 0.0, 'Sn': 3.0, 'Wi': 0.08, 'Unit': '°C'},
-    'TDS': {'V0': 0.0, 'Sn': 500.0, 'Wi': 0.05, 'Unit': 'mg/L'}
+# --- Model Configurations ---
+
+# Parameters for Springs
+SPRINGS_PARAMS = {
+    'Aluminum [µg/l Al]': {'weight': 0.001828, 'standard': 200},
+    'Ammonium [mg/l NH4]': {'weight': 0.040472, 'standard': 0.5},
+    'Arsenic [µg/l As]': {'weight': 0.009174, 'standard': 10},
+    'Cadmium [µg/l Cd]': {'weight': 0.033676, 'standard': 5},
+    'Chlorides [mg/l Cl]': {'weight': 0.038744, 'standard': 250},
+    'Chlorites [µg/l ClO2]': {'weight': 0.018832, 'standard': 700},
+    'Copper [mg/l Cu]': {'weight': 0.119593, 'standard': 2},
+    'Fluorides [mg/l F]': {'weight': 0.01348, 'standard': 1.5},
+    'Hardness [°F]': {'weight': 0.100148, 'standard': 50},
+    'Iron [µg/l Fe]': {'weight': 0.040982, 'standard': 200},
+    'Lead [µg/l Pb]': {'weight': 0.096853, 'standard': 10},
+    'Magnesium [mg/l Mg]': {'weight': 0.111423, 'standard': 30},
+    'Manganese [µg/l Mn]': {'weight': 0.04212, 'standard': 50},
+    'Nitrates [mg/l NO3]': {'weight': 0.019065, 'standard': 50},
+    'pH': {'weight': 0.076599, 'low': 6.5, 'high': 9.5},
+    'Sodium [mg/l Na]': {'weight': 0.016428, 'standard': 200},
+    'Sulfates [mg/l SO4]': {'weight': 0.078955, 'standard': 250},
+    'Turbidity [NTU]': {'weight': 0.049485, 'standard': 0.3},
+    'Vanadium [µg/l V]': {'weight': 0.010561, 'standard': 140},
+    'Zinc [µg/l Zn]': {'weight': 0.081582, 'standard': 5000}
 }
 
-def sub_index_qi(value, param):
-    """Calculate sub-index Qi for a parameter (linear approximation)."""
-    config = PARAMETERS[param]
-    V0, Sn = config['V0'], config['Sn']
-    
-    if not isinstance(value, (int, float)) or pd.isna(value):
+# Parameters for Wells
+WELLS_PARAMS = {
+    'Aluminum [µg/l Al]': {'weight': 0.08524457, 'standard': 200},
+    'Ammonium [mg/l NH4]': {'weight': 0.00472345, 'standard': 0.5},
+    'Arsenic [µg/l As]': {'weight': 0.02818904, 'standard': 10},
+    'Cadmium [µg/l Cd]': {'weight': 0.07304108, 'standard': 5},
+    'Chlorides [mg/l Cl]': {'weight': 0.05636716, 'standard': 250},
+    'Copper [mg/l Cu]': {'weight': 0.0546783, 'standard': 2},
+    'Fluorides [mg/l F]': {'weight': 0.08794153, 'standard': 1.5},
+    'Hardness [°F]': {'weight': 0.05360424, 'standard': 50},
+    'Iron [µg/l Fe]': {'weight': 0.07653616, 'standard': 200},
+    'Lead [µg/l Pb]': {'weight': 0.15238569, 'standard': 10},
+    'Magnesium [mg/l Mg]': {'weight': 0.06770434, 'standard': 30},
+    'Manganese [µg/l Mn]': {'weight': 0.04199309, 'standard': 50},
+    'Nitrates [mg/l NO3]': {'weight': 0.02516202, 'standard': 50},
+    'pH': {'weight': 0.03543887, 'low': 6.5, 'high': 9.5},
+    'Sodium [mg/l Na]': {'weight': 0.07688634, 'standard': 200},
+    'Sulfates [mg/l SO4]': {'weight': 0.04959354, 'standard': 250},
+    'Turbidity [NTU]': {'weight': 0.0030536, 'standard': 0.3},
+    'Vanadium [µg/l V]': {'weight': 0.00286481, 'standard': 140},
+    'Zinc [µg/l Zn]': {'weight': 0.02459217, 'standard': 5000}
+}
+
+# Parameters for Lakes
+LAKES_PARAMS = {
+    'Aluminum [µg/l Al]': {'weight': 0.13732495, 'standard': 200},
+    'Ammonium [mg/l NH4]': {'weight': 0.08499825, 'standard': 0.5},
+    'Arsenic [µg/l As]': {'weight': 0.00785124, 'standard': 10},
+    'Cadmium [µg/l Cd]': {'weight': 0.03023614, 'standard': 5},
+    'Calcium [mg/l Ca]': {'weight': 0.0037585, 'standard': 300},
+    'Chlorides [mg/l Cl]': {'weight': 0.12006373, 'standard': 250},
+    'Conductivity at 20°C [µS/cm]': {'weight': 0.10301697, 'standard': 2500},
+    'Copper [mg/l Cu]': {'weight': 0.05903513, 'standard': 2},
+    'Fluorides [mg/l F]': {'weight': 0.05134627, 'standard': 1.5},
+    'Hardness [°F]': {'weight': 0.00831767, 'standard': 50},
+    'Iron [µg/l Fe]': {'weight': 0.02670118, 'standard': 200},
+    'Lead [µg/l Pb]': {'weight': 0.02825393, 'standard': 10},
+    'Manganese [µg/l Mn]': {'weight': 0.00192557, 'standard': 50},
+    'Nitrates [mg/l NO3]': {'weight': 0.02986598, 'standard': 50},
+    'pH': {'weight': 0.03950439, 'low': 6.5, 'high': 9.5},
+    'Sodium [mg/l Na]': {'weight': 0.08998053, 'standard': 200},
+    'Sulfates [mg/l SO4]': {'weight': 0.02081114, 'standard': 250},
+    'Turbidity [NTU]': {'weight': 0.08237665, 'standard': 0.3},
+    'Vanadium [µg/l V]': {'weight': 0.03977873, 'standard': 140},
+    'Zinc [µg/l Zn]': {'weight': 0.03485305, 'standard': 5000}
+}
+
+# --- WQI Calculation Functions ---
+
+def calculate_sub_index(value, param, param_config):
+    """Calculates the sub-index for a given parameter."""
+    if pd.isna(value):
         return None
-    if value > Sn:
-        return 0.0
-    elif param in ['BOD5', 'Turbidity', 'Nitrate', 'TDS', 'Temp_Change']:
-        return 100.0 * ((Sn - value) / Sn)
-    elif param == 'Total_Coliform':
-        return 100.0 * (1.0 - np.log10(max(value, 1.0)) / np.log10(config['Sn'])) if value > 0 else 100.0
+    if param == 'pH':
+        return abs((value - 7) / (param_config['high'] - 7)) * 100
     else:
-        return 100.0 * ((value - V0) / (Sn - V0)) if Sn != V0 else 100.0
+        return (value / param_config['standard']) * 100
 
-def calculate_wqi(data):
-    """Calculate WQI for a single sample."""
-    qi_values = []
-    weights = []
+def calculate_wqi(data, params):
+    """Calculates the Water Quality Index (WQI)."""
+    wqi = 0
+    total_weight = 0
+    for param, config in params.items():
+        if param in data and not pd.isna(data[param]):
+            sub_index = calculate_sub_index(data[param], param, config)
+            if sub_index is not None:
+                wqi += sub_index * config['weight']
+                total_weight += config['weight']
     
-    for param in PARAMETERS:
-        if param in data and data[param] is not None:
-            qi = sub_index_qi(data[param], param)
-            if qi is not None:
-                qi_values.append(qi * PARAMETERS[param]['Wi'])
-                weights.append(PARAMETERS[param]['Wi'])
-    
-    if not weights:
+    if total_weight == 0:
         return None, "No valid data provided"
-    wqi = sum(qi_values) / sum(weights)
-    
-    # Classify WQI
-    if wqi > 90: return wqi, 'Excellent'
-    elif wqi > 70: return wqi, 'Good'
-    elif wqi > 50: return wqi, 'Medium'
-    elif wqi > 25: return wqi, 'Poor'
-    else: return wqi, 'Very Poor'
+        
+    return wqi, classify_wqi(wqi)
 
-# Streamlit App
-st.set_page_config(page_title="WQI Calculator", page_icon="💧")
-st.title("💧 Water Quality Index (WQI) Calculator")
-st.markdown("""
-This tool calculates the Water Quality Index (WQI) for drinking water samples based on key parameters.
-Enter values for a single sample or upload a CSV for batch processing. Results include WQI scores and classifications.
-""")
+def classify_wqi(wqi):
+    """Classifies the WQI score."""
+    if wqi < 50:
+        return 'Excellent water'
+    elif wqi <= 100:
+        return 'Good water'
+    elif wqi <= 200:
+        return 'Poor water'
+    elif wqi <= 300:
+        return 'Very poor water'
+    else:
+        return 'Unsuitable for drinking'
 
-# Sidebar for Help
+# --- Streamlit App ---
+
+st.set_page_config(page_title="WQI Calculator", page_icon="💧", layout="wide")
+
+# Header
+st.title("💧 Lario Reti Holding Spa - WQI Tool")
+st.markdown("A tool for calculating the Water Quality Index (WQI) for different water bodies.")
+
+# Sidebar for Model Selection and Help
 with st.sidebar:
+    st.header("Settings")
+    water_body = st.selectbox(
+        "Select Water Body",
+        ("Springs", "Wells", "Lakes")
+    )
     st.header("Help")
     st.info("""
-    - **Input Guidance**: Enter values within typical ranges (e.g., pH 6.5–8.5, Turbidity ≤ 5 NTU).
-    - **Standards**: Based on WHO/EPA guidelines.
-    - **CSV Format**: Columns should include 'Location' and parameter names (e.g., pH, DO, BOD5).
-    - **WQI Classes**: Excellent (>90), Good (>70), Medium (>50), Poor (>25), Very Poor (≤25).
-    For support, contact your water quality team.
+        - **Select a Water Body**: Choose between Springs, Wells, or Lakes to use the correct WQI model.
+        - **Single Sample**: Manually enter the values for each parameter.
+        - **Batch Processing**: Upload a CSV file with the required parameter columns.
+        - **WQI Classification**:
+            - < 50: Excellent
+            - 50-100: Good
+            - 100-200: Poor
+            - 200-300: Very Poor
+            - > 300: Unsuitable for drinking
     """)
 
-# Single Sample Input
-st.header("Single Sample Input")
-location = st.text_input("Sample Location (e.g., Plant A)", "Sample_001")
+# Parameter selection based on water body
+if water_body == "Springs":
+    PARAMETERS = SPRINGS_PARAMS
+elif water_body == "Wells":
+    PARAMETERS = WELLS_PARAMS
+else:
+    PARAMETERS = LAKES_PARAMS
 
-# Input form with float-only parameters
-data = {}
-for param, config in PARAMETERS.items():
-    data[param] = st.number_input(
-        f"{param} ({config['Unit']})",
-        min_value=0.0 if param != 'pH' else 0.0,
-        max_value=float(config['Sn'] * 1.5),  # Ensure float
-        value=float(config['V0']),           # Ensure float
-        step=0.1,                            # Float step
-        help=f"Ideal: {config['V0']}, Max Standard: {config['Sn']} {config['Unit']}"
-    )
+# --- Main App Sections (using tabs) ---
+tab1, tab2 = st.tabs(["Single Sample Input", "Batch Processing (CSV Upload)"])
 
-# Calculate Button
-if st.button("Calculate WQI"):
-    wqi, wqi_class = calculate_wqi(data)
-    if wqi is None:
-        st.error(wqi_class)
-    else:
-        st.success(f"**WQI**: {wqi:.2f} (**{wqi_class}**) for {location}")
+with tab1:
+    st.header(f"Single Sample Input for {water_body}")
+    
+    with st.form(key='single_sample_form'):
+        location = st.text_input("Sample Location (e.g., Plant A)", "Sample_001")
         
-        # Visualize
-        st.subheader("WQI Visualization")
-        fig, ax = plt.subplots(figsize=(4, 6))
-        sns.barplot(x=[location], y=[wqi], hue=[wqi_class], ax=ax)
-        ax.set_ylim(0, 100)
-        ax.set_ylabel("WQI Score")
+        # Create columns for a cleaner layout
+        cols = st.columns(3)
+        data = {}
+        col_index = 0
+        for param, config in PARAMETERS.items():
+            with cols[col_index % 3]:
+                if param == 'pH':
+                    data[param] = st.number_input(
+                        label=param,
+                        min_value=0.0,
+                        max_value=14.0,
+                        value=7.0,
+                        step=0.1
+                    )
+                else:
+                    data[param] = st.number_input(
+                        label=param,
+                        min_value=0.0,
+                        value=0.0,
+                        step=0.1
+                    )
+            col_index += 1
+            
+        submit_button = st.form_submit_button(label='Calculate WQI')
+
+    if submit_button:
+        wqi, wqi_class = calculate_wqi(data, PARAMETERS)
+        if wqi is None:
+            st.error(wqi_class)
+        else:
+            st.success(f"**WQI for {location}**: {wqi:.2f} - **{wqi_class}**")
+            
+            # Visualization
+            st.subheader("WQI Visualization")
+            fig, ax = plt.subplots(figsize=(6, 4))
+            sns.barplot(x=[location], y=[wqi], palette=["#2ecc71" if wqi < 50 else "#f1c40f" if wqi <= 100 else "#e74c3c" if wqi <= 300 else "#c0392b"])
+            ax.set_ylim(0, max(350, wqi * 1.2))
+            ax.set_ylabel("WQI Score")
+            st.pyplot(fig)
+
+            # Download results
+            result_df = pd.DataFrame({
+                'Location': [location],
+                'WQI': [wqi],
+                'Class': [wqi_class],
+                **data
+            })
+            csv = result_df.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="Download Results as CSV",
+                data=csv,
+                file_name=f'wqi_{location}.csv',
+                mime='text/csv',
+            )
+
+with tab2:
+    st.header(f"Batch Processing for {water_body}")
+    uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
+
+    if uploaded_file is not None:
+        df = pd.read_csv(uploaded_file)
+        
+        # Ensure all necessary columns are present, fill missing with NaN
+        for param in PARAMETERS.keys():
+            if param not in df.columns:
+                df[param] = np.nan
+
+        results = df.apply(lambda row: calculate_wqi(row, PARAMETERS), axis=1, result_type='expand')
+        df[['WQI', 'Class']] = results
+
+        st.write("### Batch Results")
+        st.dataframe(df)
+
+        # Visualization of Batch Results
+        st.write("### WQI Distribution for Batch")
+        fig, ax = plt.subplots(figsize=(12, 6))
+        sns.barplot(data=df, x=df.index, y='WQI', hue='Class', dodge=False)
+        plt.xticks(rotation=45)
+        ax.set_ylim(0, max(350, df['WQI'].max() * 1.2))
         st.pyplot(fig)
         
-        # Save to CSV
-        result = pd.DataFrame({
-            'Location': [location],
-            'WQI': [wqi],
-            'Class': [wqi_class],
-            **data
-        })
-        csv = result.to_csv(index=False)
-        st.download_button("Download Results", csv, f"wqi_{location}.csv", "text/csv")
-
-# Batch Processing
-st.header("Batch Processing (CSV Upload)")
-st.markdown("Upload a CSV with columns: Location, pH, DO, BOD5, etc.")
-uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
-if uploaded_file:
-    df = pd.read_csv(uploaded_file)
-    if 'Location' not in df.columns:
-        df['Location'] = [f"Sample_{i+1}" for i in range(len(df))]
-    
-    result_df = df.copy()
-    result_df[['WQI', 'Class']] = result_df.apply(
-        lambda row: calculate_wqi(row), axis=1, result_type='expand'
-    )
-    
-    st.write("**Batch Results**", result_df[['Location', 'WQI', 'Class'] + list(PARAMETERS.keys())])
-    
-    # Visualize
-    st.subheader("Batch WQI Visualization")
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sns.barplot(data=result_df, x='Location', y='WQI', hue='Class', ax=ax)
-    ax.set_ylim(0, 100)
-    ax.set_ylabel("WQI Score")
-    ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
-    plt.tight_layout()
-    st.pyplot(fig)
-    
-    # Download
-    csv = result_df.to_csv(index=False)
-    st.download_button("Download Batch Results", csv, "wqi_batch_results.csv", "text/csv")
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download Batch Results as CSV",
+            data=csv,
+            file_name='wqi_batch_results.csv',
+            mime='text/csv',
+        )
