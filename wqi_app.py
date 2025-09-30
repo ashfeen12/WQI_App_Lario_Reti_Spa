@@ -121,9 +121,14 @@ def classify_wqi(wqi):
 
 st.set_page_config(page_title="WQI Calculator", page_icon="💧", layout="wide")
 
-# Header
-st.title("💧 Lario Reti Holding Spa - WQI Tool")
-st.markdown("A tool for calculating the Water Quality Index (WQI) for different water bodies.")
+# --- HEADER WITH MAIN LOGO AND TITLE ---
+col1, col2 = st.columns([1, 4])
+with col1:
+    st.image("logolario.png", width=150) # Main company logo
+with col2:
+    st.title("Lario Reti Holding Spa - WQI Tool")
+    st.markdown("A tool for calculating the Water Quality Index (WQI) for different water bodies.")
+
 
 # Sidebar for Model Selection and Help
 with st.sidebar:
@@ -134,15 +139,15 @@ with st.sidebar:
     )
     st.header("Help")
     st.info("""
-        - **Select a Water Body**: Choose between Springs, Wells, or Lakes to use the correct WQI model.
-        - **Single Sample**: Manually enter the values for each parameter.
-        - **Batch Processing**: Upload a CSV file with the required parameter columns.
+        - **Select a Water Body**: Choose between Springs, Wells, or Lakes.
+        - **Single Sample**: Manually enter values.
+        - **Batch Processing**: Upload a CSV with parameter columns.
         - **WQI Classification**:
             - < 50: Excellent
             - 50-100: Good
             - 100-200: Poor
             - 200-300: Very Poor
-            - > 300: Unsuitable for drinking
+            - > 300: Unsuitable
     """)
 
 # Parameter selection based on water body
@@ -157,32 +162,21 @@ else:
 tab1, tab2 = st.tabs(["Single Sample Input", "Batch Processing (CSV Upload)"])
 
 with tab1:
+    # ... (The content of this tab remains the same)
     st.header(f"Single Sample Input for {water_body}")
     
     with st.form(key='single_sample_form'):
         location = st.text_input("Sample Location (e.g., Plant A)", "Sample_001")
         
-        # Create columns for a cleaner layout
         cols = st.columns(3)
         data = {}
         col_index = 0
         for param, config in PARAMETERS.items():
             with cols[col_index % 3]:
                 if param == 'pH':
-                    data[param] = st.number_input(
-                        label=param,
-                        min_value=0.0,
-                        max_value=14.0,
-                        value=7.0,
-                        step=0.1
-                    )
+                    data[param] = st.number_input(label=param, min_value=0.0, max_value=14.0, value=7.0, step=0.1)
                 else:
-                    data[param] = st.number_input(
-                        label=param,
-                        min_value=0.0,
-                        value=0.0,
-                        step=0.1
-                    )
+                    data[param] = st.number_input(label=param, min_value=0.0, value=0.0, step=0.1)
             col_index += 1
             
         submit_button = st.form_submit_button(label='Calculate WQI')
@@ -194,7 +188,6 @@ with tab1:
         else:
             st.success(f"**WQI for {location}**: {wqi:.2f} - **{wqi_class}**")
             
-            # Visualization
             st.subheader("WQI Visualization")
             fig, ax = plt.subplots(figsize=(6, 4))
             sns.barplot(x=[location], y=[wqi], palette=["#2ecc71" if wqi < 50 else "#f1c40f" if wqi <= 100 else "#e74c3c" if wqi <= 300 else "#c0392b"])
@@ -202,29 +195,18 @@ with tab1:
             ax.set_ylabel("WQI Score")
             st.pyplot(fig)
 
-            # Download results
-            result_df = pd.DataFrame({
-                'Location': [location],
-                'WQI': [wqi],
-                'Class': [wqi_class],
-                **data
-            })
+            result_df = pd.DataFrame({'Location': [location], 'WQI': [wqi], 'Class': [wqi_class], **data})
             csv = result_df.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="Download Results as CSV",
-                data=csv,
-                file_name=f'wqi_{location}.csv',
-                mime='text/csv',
-            )
+            st.download_button(label="Download Results as CSV", data=csv, file_name=f'wqi_{location}.csv', mime='text/csv')
 
 with tab2:
+    # ... (The content of this tab remains the same)
     st.header(f"Batch Processing for {water_body}")
     uploaded_file = st.file_uploader("Upload a CSV file", type=["csv"])
 
     if uploaded_file is not None:
         df = pd.read_csv(uploaded_file)
         
-        # Ensure all necessary columns are present, fill missing with NaN
         for param in PARAMETERS.keys():
             if param not in df.columns:
                 df[param] = np.nan
@@ -235,7 +217,6 @@ with tab2:
         st.write("### Batch Results")
         st.dataframe(df)
 
-        # Visualization of Batch Results
         st.write("### WQI Distribution for Batch")
         fig, ax = plt.subplots(figsize=(12, 6))
         sns.barplot(data=df, x=df.index, y='WQI', hue='Class', dodge=False)
@@ -244,9 +225,15 @@ with tab2:
         st.pyplot(fig)
         
         csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="Download Batch Results as CSV",
-            data=csv,
-            file_name='wqi_batch_results.csv',
-            mime='text/csv',
-        )
+        st.download_button(label="Download Batch Results as CSV", data=csv, file_name='wqi_batch_results.csv', mime='text/csv')
+
+# --- FOOTER WITH PARTNER LOGOS ---
+st.markdown("---")
+st.subheader("Project Partners")
+fcol1, fcol2, fcol3 = st.columns(3)
+with fcol1:
+    st.image("Horizon-H2020-logo.jpg")
+with fcol2:
+    st.image("logoMiPORE.png")
+with fcol3:
+    st.image("logoremedi.jpg")
