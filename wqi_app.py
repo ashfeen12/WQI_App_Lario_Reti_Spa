@@ -53,8 +53,8 @@ WELLS_PARAMS = {
     'Zinc [µg/l Zn]': {'weight': 0.02459217, 'standard': 5000}
 }
 
-# Parameters for Lakes
-LAKES_PARAMS = {
+# Parameters for Lake
+LAKE_PARAMS = {
     'Aluminum [µg/l Al]': {'weight': 0.13732495, 'standard': 200},
     'Ammonium [mg/l NH4]': {'weight': 0.08499825, 'standard': 0.5},
     'Arsenic [µg/l As]': {'weight': 0.00785124, 'standard': 10},
@@ -135,11 +135,11 @@ with st.sidebar:
     st.header("Settings")
     water_body = st.selectbox(
         "Select Water Body",
-        ("Springs", "Wells", "Lakes")
+        ("Springs", "Wells", "Lake")
     )
     st.header("Help")
     st.info("""
-        - **Select a Water Body**: Choose between Springs, Wells, or Lakes.
+        - **Select a Water Body**: Choose between Springs, Wells, or Lake.
         - **Single Sample**: Manually enter values.
         - **Batch Processing**: Upload a CSV with parameter columns.
         - **WQI Classification**:
@@ -156,7 +156,7 @@ if water_body == "Springs":
 elif water_body == "Wells":
     PARAMETERS = WELLS_PARAMS
 else:
-    PARAMETERS = LAKES_PARAMS
+    PARAMETERS = LAKE_PARAMS
 
 # --- Main App Sections (using tabs) ---
 tab1, tab2 = st.tabs(["Single Sample Input", "Batch Processing (CSV Upload)"])
