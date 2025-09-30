@@ -4,17 +4,17 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-# WQI Parameters (EPA/WHO-inspired for drinking water)
+# WQI Parameters (all numeric values as floats for consistency)
 PARAMETERS = {
     'pH': {'V0': 7.0, 'Sn': 8.5, 'Wi': 0.10, 'Unit': ''},
     'DO': {'V0': 5.0, 'Sn': 14.6, 'Wi': 0.17, 'Unit': 'mg/L'},
-    'BOD5': {'V0': 0, 'Sn': 3.0, 'Wi': 0.12, 'Unit': 'mg/L'},
-    'Turbidity': {'V0': 0, 'Sn': 5.0, 'Wi': 0.08, 'Unit': 'NTU'},
-    'Total_Coliform': {'V0': 0, 'Sn': 5, 'Wi': 0.15, 'Unit': 'CFU/100mL'},
-    'Nitrate': {'V0': 0, 'Sn': 45, 'Wi': 0.10, 'Unit': 'mg/L'},
+    'BOD5': {'V0': 0.0, 'Sn': 3.0, 'Wi': 0.12, 'Unit': 'mg/L'},
+    'Turbidity': {'V0': 0.0, 'Sn': 5.0, 'Wi': 0.08, 'Unit': 'NTU'},
+    'Total_Coliform': {'V0': 0.0, 'Sn': 5.0, 'Wi': 0.15, 'Unit': 'CFU/100mL'},
+    'Nitrate': {'V0': 0.0, 'Sn': 45.0, 'Wi': 0.10, 'Unit': 'mg/L'},
     'Residual_Chlorine': {'V0': 0.2, 'Sn': 4.0, 'Wi': 0.15, 'Unit': 'mg/L'},
-    'Temp_Change': {'V0': 0, 'Sn': 3.0, 'Wi': 0.08, 'Unit': '°C'},
-    'TDS': {'V0': 0, 'Sn': 500, 'Wi': 0.05, 'Unit': 'mg/L'}
+    'Temp_Change': {'V0': 0.0, 'Sn': 3.0, 'Wi': 0.08, 'Unit': '°C'},
+    'TDS': {'V0': 0.0, 'Sn': 500.0, 'Wi': 0.05, 'Unit': 'mg/L'}
 }
 
 def sub_index_qi(value, param):
@@ -25,13 +25,13 @@ def sub_index_qi(value, param):
     if not isinstance(value, (int, float)) or pd.isna(value):
         return None
     if value > Sn:
-        return 0
+        return 0.0
     elif param in ['BOD5', 'Turbidity', 'Nitrate', 'TDS', 'Temp_Change']:
-        return 100 * ((Sn - value) / Sn)
+        return 100.0 * ((Sn - value) / Sn)
     elif param == 'Total_Coliform':
-        return 100 * (1 - np.log10(max(value, 1)) / np.log10(config['Sn'])) if value > 0 else 100
+        return 100.0 * (1.0 - np.log10(max(value, 1.0)) / np.log10(config['Sn'])) if value > 0 else 100.0
     else:
-        return 100 * ((value - V0) / (Sn - V0)) if Sn != V0 else 100
+        return 100.0 * ((value - V0) / (Sn - V0)) if Sn != V0 else 100.0
 
 def calculate_wqi(data):
     """Calculate WQI for a single sample."""
@@ -46,7 +46,7 @@ def calculate_wqi(data):
                 weights.append(PARAMETERS[param]['Wi'])
     
     if not weights:
-        return None, "No valid data"
+        return None, "No valid data provided"
     wqi = sum(qi_values) / sum(weights)
     
     # Classify WQI
@@ -72,21 +72,22 @@ with st.sidebar:
     - **Standards**: Based on WHO/EPA guidelines.
     - **CSV Format**: Columns should include 'Location' and parameter names (e.g., pH, DO, BOD5).
     - **WQI Classes**: Excellent (>90), Good (>70), Medium (>50), Poor (>25), Very Poor (≤25).
+    For support, contact your water quality team.
     """)
 
 # Single Sample Input
 st.header("Single Sample Input")
 location = st.text_input("Sample Location (e.g., Plant A)", "Sample_001")
 
-# Input form with guidance
+# Input form with float-only parameters
 data = {}
 for param, config in PARAMETERS.items():
     data[param] = st.number_input(
         f"{param} ({config['Unit']})",
         min_value=0.0 if param != 'pH' else 0.0,
-        max_value=config['Sn'] * 1.5,
-        value=config['V0'],
-        step=0.1,
+        max_value=float(config['Sn'] * 1.5),  # Ensure float
+        value=float(config['V0']),           # Ensure float
+        step=0.1,                            # Float step
         help=f"Ideal: {config['V0']}, Max Standard: {config['Sn']} {config['Unit']}"
     )
 
