@@ -232,8 +232,5 @@ st.markdown("---")
 st.subheader("Project Partners")
 fcol1, fcol2, fcol3 = st.columns(3)
 with fcol1:
-    st.image("Horizon-H2020-logo.jpg")
-with fcol2:
-    st.image("logoMiPORE.png")
-with fcol3:
-    st.image("logoremedi.jpg")
+    st.image("weblogoall.jpg")
+
